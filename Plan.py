@@ -6,6 +6,7 @@ import dateutil.tz
 from flask import g
 from time import time
 import re
+from math import floor
 
 __author__ = 'gongshw'
 
@@ -92,9 +93,9 @@ def get_time_range(index, unit):
 def time_to_index(timestamp, unit):
     timestamp += __time_zone_fix_seconds
     if unit == 'day':
-        return timestamp / __day_seconds
+        return floor(timestamp / __day_seconds)
     elif unit == 'week':
-        return (timestamp + __day_seconds * 3) / (__day_seconds * 7)
+        return floor((timestamp + __day_seconds * 3) / (__day_seconds * 7))
     elif unit == 'month':
         date = datetime.fromtimestamp(timestamp, dateutil.tz.tzutc())
         return (date.year - 1970) * 12 + date.month - 1
