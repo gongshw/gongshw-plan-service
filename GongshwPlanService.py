@@ -27,10 +27,10 @@ def get_plans(index, unit):
     return wrap_response(Plan.get_plans(index, unit))
 
 
-# 得到当前(日、周、月)计划
-@app.route('/plan/<unit>', methods=['GET'])
-def get_current_plans(unit):
-    return wrap_response(Plan.get_current_plans(unit))
+# 得到当前的所有的计划
+@app.route('/plan/active', methods=['GET'])
+def get_current_plans():
+    return wrap_response(Plan.get_current_plans())
 
 
 # 添加一个计划
@@ -73,6 +73,7 @@ def request_error_handler(error):
 
 @app.teardown_appcontext
 def close_connection(e):
+    print e
     db = getattr(g, '_db', None)
     if db is not None:
         db.close()

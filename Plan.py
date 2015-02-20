@@ -165,5 +165,6 @@ def get_plans(index, unit):
     return plans
 
 
-def get_current_plans(unit):
-    return get_plans(time_to_index(time(), unit), unit)
+def get_current_plans():
+    time_now = time()
+    return {unit: get_plans(time_to_index(time_now, unit), unit) for unit in ['day', 'week', 'month']}
