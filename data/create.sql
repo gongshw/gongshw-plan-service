@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS "plan_meta" (
   "index"     INTEGER NOT NULL,
   "repeat"    INTEGER NOT NULL,
   "text"      TEXT    NOT NULL,
+  "color"     TEXT NOT NULL,
   "sort"      REAL    NOT NULL,
   "add_at"    INTEGER NOT NULL,
   "delete_at" INTEGER

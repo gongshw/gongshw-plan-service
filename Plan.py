@@ -43,7 +43,7 @@ def _timestamp(year, month):
 
 
 def _check_plan_attributes(plan):
-    required_attributes = ['id', 'unit', 'text', 'index', 'repeat', 'sort']
+    required_attributes = ['id', 'unit', 'text', 'index', 'repeat', 'sort', 'color']
     for key in required_attributes:
         if key not in plan:
             raise RequestException('plan has no attr %s' % key)
@@ -59,6 +59,12 @@ def _check_plan_attributes(plan):
         raise RequestException('plan\'s text(%s) is empty' % plan['text'])
     if 'sort' in plan and type(plan['sort']) not in [float, int]:
         raise RequestException('plan\'s sort(%s) is not a number' % plan['sort'])
+    if 'color' in plan and type(plan['color']) is not str or not _valid_hex_color(plan['color']):
+        raise RequestException('plan\'s sort(%s) is not a number' % plan['sort'])
+
+
+def _valid_hex_color(color):
+    return re.compile(r'#[0-9A-Fa-f]{6}').match(color) is not None
 
 
 _uuid_hex_pattern = re.compile('[0-9a-f]{32}\Z', re.I)
@@ -113,9 +119,11 @@ def add_plan(plan):
     plan_exist = _db_query('SELECT * FROM plan_meta WHERE id = ?', [plan['id']])
     if plan_exist:
         raise RequestException('this plan exists')
-    insert_sql = 'INSERT INTO plan_meta (id,unit,"index",repeat,"text",sort,add_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    insert_sql = '''INSERT INTO plan_meta (id,unit,"index",repeat,"text",color,sort,add_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
     _db_execute(insert_sql,
-                [plan['id'], plan['unit'], plan['index'], plan['repeat'], plan['text'], plan['sort'], time()])
+                [plan['id'], plan['unit'], plan['index'], plan['repeat'], plan['text'], plan['color'], plan['sort'],
+                 time()])
     pass
 
 
@@ -142,11 +150,13 @@ def delete_plan_record(plan_id, index):
 
 def get_plans(index, unit):
     timestamp = get_time_range(index, unit)[1]
+    index = time_to_index(timestamp, unit)
     plans = _db_query('''
-                      SELECT m.id AS id, m.repeat AS repeat, m.text AS text, m.sort AS sort, r.finish_at AS finish_at
+                      SELECT m.id AS id, m.repeat AS repeat, m.text AS 'text',
+                        m.color AS 'color', m.sort AS sort, r.finish_at AS finish_at
                       FROM plan_meta m LEFT JOIN plan_record r ON m.id == r.meta_id
-                      WHERE m.unit = ? AND m."index" <= ? AND (m.delete_at IS NULL OR m.delete_at > ?)''',
-                      (unit, time_to_index(timestamp, unit), timestamp))
+                      WHERE m.unit = ? AND m."index" <= ? AND (m.delete_at IS NULL OR m.delete_at > ?)
+                      AND r."index" = ?''', (unit, index, timestamp, index))
     if plans:
         for p in plans:
             p['repeat'] = [False, True][p['repeat']]
