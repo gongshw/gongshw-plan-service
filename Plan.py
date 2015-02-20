@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import sqlite3
 from datetime import datetime
+import dateutil.tz
 from flask import g
 from time import time
 import re
@@ -59,8 +60,8 @@ def _check_plan_attributes(plan):
         raise RequestException('plan\'s text(%s) is empty' % plan['text'])
     if 'sort' in plan and type(plan['sort']) not in [float, int]:
         raise RequestException('plan\'s sort(%s) is not a number' % plan['sort'])
-    if 'color' in plan and type(plan['color']) is not str or not _valid_hex_color(plan['color']):
-        raise RequestException('plan\'s sort(%s) is not a number' % plan['sort'])
+    if 'color' in plan and not _valid_hex_color(plan['color']):
+        raise RequestException('plan\'s color(%s) is not a color' % plan['color'])
 
 
 def _valid_hex_color(color):
@@ -95,7 +96,7 @@ def time_to_index(timestamp, unit):
     elif unit == 'week':
         return (timestamp + __day_seconds * 3) / (__day_seconds * 7)
     elif unit == 'month':
-        date = datetime.fromtimestamp(timestamp)
+        date = datetime.fromtimestamp(timestamp, dateutil.tz.tzutc())
         return (date.year - 1970) * 12 + date.month - 1
     else:
         return False
@@ -150,13 +151,12 @@ def delete_plan_record(plan_id, index):
 
 def get_plans(index, unit):
     timestamp = get_time_range(index, unit)[1]
-    index = time_to_index(timestamp, unit)
     plans = _db_query('''
                       SELECT m.id AS id, m.repeat AS repeat, m.text AS 'text',
                         m.color AS 'color', m.sort AS sort, r.finish_at AS finish_at
-                      FROM plan_meta m LEFT JOIN plan_record r ON m.id == r.meta_id
+                      FROM plan_meta m LEFT JOIN plan_record r ON m.id == r.meta_id AND r."index" = ?
                       WHERE m.unit = ? AND m."index" <= ? AND (m.delete_at IS NULL OR m.delete_at > ?)
-                      AND r."index" = ?''', (unit, index, timestamp, index))
+                      ''', (index, unit, index, timestamp))
     if plans:
         for p in plans:
             p['repeat'] = [False, True][p['repeat']]
