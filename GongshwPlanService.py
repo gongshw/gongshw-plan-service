@@ -33,14 +33,18 @@ def get_current_plans():
     return wrap_response(Plan.get_current_plans())
 
 
-# 添加一个计划
+# 添加/修改一个计划
 @app.route('/plan/<plan_id>', methods=['PUT', 'POST'])
 def add_plan(plan_id):
-    print request.data
-    plan_to_add = request.get_json()
-    if not plan_to_add['id'] == plan_id:
+    plan_to_save = request.get_json()
+    if not plan_to_save['id'] == plan_id:
         raise Exception('id in url not matched with id in request body')
-    Plan.add_plan(plan_to_add)
+    plan_exist = Plan.get_plan(plan_id)
+    if plan_exist:
+        if 'sort' in plan_to_save and type(plan_to_save['sort']) in [float, int]:
+            Plan.update_plan_filed(plan_id, 'sort', plan_to_save['sort'])
+    else:
+        Plan.add_plan(plan_to_save)
     return success()
 
 
@@ -73,7 +77,8 @@ def request_error_handler(error):
 
 @app.teardown_appcontext
 def close_connection(e):
-    print e
+    if e is not None:
+        print e
     db = getattr(g, '_db', None)
     if db is not None:
         db.close()

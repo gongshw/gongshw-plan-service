@@ -134,12 +134,24 @@ def delete_plan(plan_id):
 
 
 def add_plan_record(plan_id, index):
-    plan = _db_query('SELECT * FROM plan_meta WHERE id = ?', [plan_id])
+    plan = get_plan(plan_id)
     if not plan:
         raise RequestException('no plan %s exist' % plan_id)
     if _db_query('SELECT * FROM plan_record WHERE meta_id = ? AND "index" =?', (plan_id, index)):
         return
     _db_execute('INSERT INTO plan_record (meta_id, "index", finish_at) VALUES (?, ?, ?)', (plan_id, index, time()))
+
+
+def get_plan(plan_id):
+    plan = _db_query('SELECT * FROM plan_meta WHERE id = ?', [plan_id], True)
+    return plan
+
+
+# 目前只允许修改sort字段
+def update_plan_filed(plan_id, field, value):
+    if field != 'sort':
+        raise RequestException('field %s can\'t be modified' % field)
+    _db_execute('UPDATE plan_meta SET sort = ?  WHERE id = ?', [value, plan_id])
 
 
 def delete_plan_record(plan_id, index):
@@ -157,6 +169,7 @@ def get_plans(index, unit):
                         m.color AS 'color', m.sort AS sort, r.finish_at AS finish_at
                       FROM plan_meta m LEFT JOIN plan_record r ON m.id == r.meta_id AND r."index" = ?
                       WHERE m.unit = ? AND m."index" <= ? AND (m.delete_at IS NULL OR m.delete_at > ?)
+                      ORDER BY sort
                       ''', (index, unit, index, timestamp))
     if plans:
         for p in plans:
